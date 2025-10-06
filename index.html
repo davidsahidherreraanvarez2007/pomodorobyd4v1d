@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temporizador Pomodoro</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏰</text></svg>">
+    <style>
+        :root {
+            --focus-bg-color: #ba4949;
+            --focus-primary-color: #ffffff;
+            --focus-button-bg: #c75c5c;
+            --focus-button-hover: #d17b7b;
+
+            --break-bg-color: #38858a;
+            --break-primary-color: #ffffff;
+            --break-button-bg: #4a9aa0;
+            --break-button-hover: #64b2b8;
+            
+            --neutral-button-bg: #6c757d;
+            --neutral-button-hover: #828a91;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            transition: background-color 0.5s ease;
+            gap: 15px;
+        }
+
+        .focus-mode {
+            background-color: var(--focus-bg-color);
+            color: var(--focus-primary-color);
+        }
+
+        .break-mode {
+            background-color: var(--break-bg-color);
+            color: var(--break-primary-color);
+        }
+        
+        #mode-selector {
+            display: flex;
+            gap: 10px;
+            background-color: rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            border-radius: 12px;
+        }
+
+        #mode-selector button {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1rem;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            color: white;
+            font-weight: 700;
+            background-color: var(--neutral-button-bg);
+        }
+
+        #mode-selector button:hover {
+            background-color: var(--neutral-button-hover);
+        }
+
+        .timer-container {
+            text-align: center;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 30px 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            width: 90%;
+            max-width: 500px;
+        }
+
+        #timer-display {
+            font-size: 5rem;
+            font-weight: 700;
+            margin: 15px 0;
+        }
+
+        #status-message {
+            font-size: 1.2rem;
+            margin-bottom: 25px;
+            height: 20px;
+        }
+
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        #controls button {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1rem;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.1s ease;
+            color: white;
+            font-weight: 700;
+        }
+        
+        #controls button:active {
+            transform: scale(0.98);
+        }
+        
+        #controls button:disabled {
+            background-color: #9e9e9e !important;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .focus-mode #controls button {
+            background-color: var(--focus-button-bg);
+        }
+
+        .focus-mode #controls button:hover:not(:disabled) {
+            background-color: var(--focus-button-hover);
+        }
+        
+        .break-mode #controls button {
+            background-color: var(--break-button-bg);
+        }
+
+        .break-mode #controls button:hover:not(:disabled) {
+            background-color: var(--break-button-hover);
+        }
+        
+        #session-counter {
+            background-color: rgba(0, 0, 0, 0.1);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="focus-mode">
+    
+    <div id="mode-selector">
+        <button id="focus-btn" data-time="30">Focus</button>
+        <button id="break-5-btn" data-time="5">Descanso 5'</button>
+        <button id="break-10-btn" data-time="10">Descanso 10'</button>
+        <button id="break-15-btn" data-time="15">Descanso 15'</button>
+    </div>
+
+    <div class="timer-container">
+        <h1 id="title-display">Temporizador Pomodoro</h1>
+        <div id="timer-display">30:00</div>
+        <p id="status-message">Selecciona un modo para empezar.</p>
+        
+        <div id="controls">
+            <button id="start-btn">Iniciar</button>
+            <button id="pause-resume-btn">Pausa</button>
+            <button id="skip-btn">Saltar</button>
+        </div>
+    </div>
+    
+    <div id="session-counter">
+        Sesiones Focus: <span id="focus-count">0</span>
+    </div>
+
+    <audio id="alarm-sound" src="./media/alarm.mp3"></audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const timerDisplay = document.getElementById('timer-display');
+            const titleDisplay = document.getElementById('title-display');
+            const statusMessage = document.getElementById('status-message');
+            const body = document.body;
+            const alarmSound = document.getElementById('alarm-sound');
+            const focusCountDisplay = document.getElementById('focus-count');
+            const modeButtons = {
+                focus: document.getElementById('focus-btn'),
+                break5: document.getElementById('break-5-btn'),
+                break10: document.getElementById('break-10-btn'),
+                break15: document.getElementById('break-15-btn'),
+            };
+            const startBtn = document.getElementById('start-btn');
+            const pauseResumeBtn = document.getElementById('pause-resume-btn');
+            const skipBtn = document.getElementById('skip-btn');
+            
+            let timer = null;
+            let totalSeconds = 30 * 60;
+            let isPaused = false;
+            let currentMode = 'focus';
+            let isTimerRunning = false;
+            let focusSessionsCompleted = 0;
+
+
+            function requestNotificationPermission() {
+                if (Notification.permission === 'granted' || Notification.permission === 'denied') {
+                    return;
+                }
+                Notification.requestPermission().then(permission => {
+                    console.log('Resultado del permiso de notificación:', permission);
+                });
+            }
+
+            function showNotification(message) {
+                console.log('Intentando mostrar notificación...');
+                console.log('Estado actual del permiso:', Notification.permission);
+
+                if (Notification.permission === 'granted') {
+                    try {
+                        const notification = new Notification('Temporizador Pomodoro', {
+                            body: message,
+                            icon: 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏰</text></svg>'
+                        });
+                        console.log('Notificación creada con éxito.');
+                    } catch (error) {
+                        console.error('Error al crear la notificación:', error);
+                        alert('Ocurrió un error al crear la notificación. Revisa la consola (F12) para más detalles.');
+                    }
+                } else {
+                    console.warn('La notificación no se mostró porque el permiso no ha sido concedido.');
+                }
+            }
+            
+
+            function updateFavicon(color) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 32; canvas.height = 32;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(16, 16, 14, 0, 2 * Math.PI);
+                ctx.fill();
+                const link = document.querySelector("link[rel~='icon']") || document.createElement('link');
+                link.rel = 'icon';
+                link.href = canvas.toDataURL();
+                document.head.appendChild(link);
+            }
+
+            function playAlarmSound() {
+                const audioSrc = alarmSound.getAttribute('src');
+                if (audioSrc) {
+                    alarmSound.currentTime = 0;
+                    alarmSound.play().catch(error => { console.error("Error al reproducir el sonido:", error); });
+                    setTimeout(() => { alarmSound.pause(); alarmSound.currentTime = 0; }, 2500);
+                }
+            }
+
+            function updateDisplay() {
+                const minutes = Math.floor(totalSeconds / 60);
+                const seconds = totalSeconds % 60;
+                const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                timerDisplay.textContent = timeString;
+                const modeText = currentMode === 'focus' ? 'Focus' : 'Descanso';
+                document.title = `${timeString} | ${modeText}`;
+            }
+            
+            function timerTick() {
+                if (totalSeconds <= 0) {
+                    playAlarmSound();
+                    if (currentMode === 'focus') { onFocusComplete(); } 
+                    else { onBreakComplete(); }
+                    return;
+                }
+                totalSeconds--;
+                updateDisplay();
+            }
+
+            function selectMode(durationInMinutes, mode) {
+                clearInterval(timer);
+                isTimerRunning = false;
+                isPaused = false;
+                totalSeconds = durationInMinutes * 60;
+                currentMode = mode;
+                updateDisplay();
+                
+                if (mode === 'focus') {
+                    body.classList.remove('break-mode');
+                    body.classList.add('focus-mode');
+                    titleDisplay.textContent = "Tiempo de Enfoque";
+                    statusMessage.textContent = "Listo para concentrarte.";
+                    updateFavicon('rgba(186, 73, 73, 1)');
+                } else {
+                    body.classList.remove('focus-mode');
+                    body.classList.add('break-mode');
+                    titleDisplay.textContent = "Tiempo de Descanso";
+                    statusMessage.textContent = "Listo para un descanso.";
+                    updateFavicon('rgba(56, 133, 138, 1)');
+                }
+
+                startBtn.disabled = false;
+                pauseResumeBtn.disabled = true;
+                pauseResumeBtn.textContent = "Pausa";
+                skipBtn.disabled = true;
+            }
+
+            function startTimer() {
+                requestNotificationPermission();
+
+                if (isTimerRunning) return;
+                isTimerRunning = true;
+                isPaused = false;
+                timer = setInterval(timerTick, 1000);
+                statusMessage.textContent = (currentMode === 'focus') ? "¡A concentrarse!" : "¡Tómate un respiro!";
+                startBtn.disabled = true;
+                pauseResumeBtn.disabled = false;
+                skipBtn.disabled = false;
+            }
+
+            function onFocusComplete() {
+                focusSessionsCompleted++;
+                focusCountDisplay.textContent = focusSessionsCompleted;
+                showNotification('Hora de descansar');
+                selectMode(5, 'break');
+                statusMessage.textContent = "¡Buen trabajo! Inicia tu descanso.";
+                document.title = "¡Descanso! | Pomodoro";
+            }
+
+            function onBreakComplete() {
+                showNotification('Hora de trabajar');
+                selectMode(30, 'focus');
+                statusMessage.textContent = "Selecciona 'Iniciar' para continuar.";
+                document.title = "¡A Trabajar! | Pomodoro";
+            }
+
+            function togglePause() {
+                if (!isTimerRunning) return;
+                isPaused = !isPaused;
+                if (isPaused) {
+                    clearInterval(timer);
+                    pauseResumeBtn.textContent = "Reanudar";
+                    statusMessage.textContent = "En pausa.";
+                    document.title = `Pausa | ${document.title}`;
+                } else {
+                    timer = setInterval(timerTick, 1000);
+                    pauseResumeBtn.textContent = "Pausa";
+                    statusMessage.textContent = (currentMode === 'focus') ? "¡A concentrarse!" : "¡Tómate un respiro!";
+                }
+            }
+
+            function skipTimer() {
+                if (!isTimerRunning) return;
+                playAlarmSound();
+                const nextMode = currentMode === 'focus' ? 'break' : 'focus';
+                const nextDuration = nextMode === 'focus' ? 30 : 5;
+                selectMode(nextDuration, nextMode);
+            }
+
+            modeButtons.focus.addEventListener('click', () => selectMode(30, 'focus'));
+            modeButtons.break5.addEventListener('click', () => selectMode(5, 'break'));
+            modeButtons.break10.addEventListener('click', () => selectMode(10, 'break'));
+            modeButtons.break15.addEventListener('click', () => selectMode(15, 'break'));
+            
+            startBtn.addEventListener('click', startTimer);
+            pauseResumeBtn.addEventListener('click', togglePause);
+            skipBtn.addEventListener('click', skipTimer);
+
+            selectMode(30, 'focus');
+        });
+    </script>
+</body>
+</html>
