@@ -170,7 +170,7 @@
         Sesiones Focus: <span id="focus-count">0</span>
     </div>
 
-    <audio id="alarm-sound" src="./media/alarm.mp3"></audio>
+    <audio id="alarm-sound" src="alarm.mp3"></audio>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -247,7 +247,7 @@
                 if (audioSrc) {
                     alarmSound.currentTime = 0;
                     alarmSound.play().catch(error => { console.error("Error al reproducir el sonido:", error); });
-                    setTimeout(() => { alarmSound.pause(); alarmSound.currentTime = 0; }, 2500);
+                    setTimeout(() => { alarmSound.pause(); alarmSound.currentTime = 0; }, 3500);
                 }
             }
 
@@ -306,7 +306,7 @@
                 isTimerRunning = true;
                 isPaused = false;
                 timer = setInterval(timerTick, 1000);
-                statusMessage.textContent = (currentMode === 'focus') ? "¡A concentrarse!" : "¡Tómate un respiro!";
+                statusMessage.textContent = (currentMode === 'focus') ? "A concentrarse!" : "Tómate un respiro!";
                 startBtn.disabled = true;
                 pauseResumeBtn.disabled = false;
                 skipBtn.disabled = false;
@@ -318,14 +318,14 @@
                 showNotification('Hora de descansar');
                 selectMode(5, 'break');
                 statusMessage.textContent = "¡Buen trabajo! Inicia tu descanso.";
-                document.title = "¡Descanso! | Pomodoro";
+                document.title = "Descanso! | Pomodoro";
             }
 
             function onBreakComplete() {
                 showNotification('Hora de trabajar');
                 selectMode(30, 'focus');
                 statusMessage.textContent = "Selecciona 'Iniciar' para continuar.";
-                document.title = "¡A Trabajar! | Pomodoro";
+                document.title = "A Trabajar! | Pomodoro";
             }
 
             function togglePause() {
@@ -339,7 +339,7 @@
                 } else {
                     timer = setInterval(timerTick, 1000);
                     pauseResumeBtn.textContent = "Pausa";
-                    statusMessage.textContent = (currentMode === 'focus') ? "¡A concentrarse!" : "¡Tómate un respiro!";
+                    statusMessage.textContent = (currentMode === 'focus') ? "A concentrarse!" : "Tómate un respiro!";
                 }
             }
 
@@ -364,4 +364,5 @@
         });
     </script>
 </body>
+
 </html>
